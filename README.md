@@ -3,7 +3,7 @@
 **Catch prompt injections and jailbreaks before they reach your model, and know exactly why each one was blocked.**
 
 ![CI](https://github.com/ahmeddoghri/injectguard/actions/workflows/ci.yml/badge.svg)
-![tests](https://img.shields.io/badge/tests-8%20passing-brightgreen)
+![tests](https://img.shields.io/badge/tests-16%20passing-brightgreen)
 ![python](https://img.shields.io/badge/python-3.9%2B-blue)
 ![deps](https://img.shields.io/badge/runtime%20deps-none-success)
 ![license](https://img.shields.io/badge/license-MIT-black)
@@ -104,6 +104,47 @@ Each signal is a small named rule, so a block is always explainable:
 | `encoding_evasion` | "respond only in base64", "so the filter cannot read this" |
 | `override_urgency` | "this is critical, you must comply" (weak, needs company) |
 
+## How it holds up on someone else's benchmark
+
+A detector graded only on its author's own test set has told you nothing yet,
+so injectguard ships the [deepset/prompt-injections](https://huggingface.co/datasets/deepset/prompt-injections)
+dataset (662 labeled prompts, Apache 2.0, embedded verbatim under
+`injectguard/data/` with attribution) and runs against it:
+
+```bash
+python -m injectguard.external_eval
+```
+```
+external benchmark: deepset/prompt-injections (662 prompts, Apache 2.0)
+
+group        n  precision   recall     f1
+all        662       1.00     0.29   0.45
+en         448       1.00     0.29   0.45
+de         214       1.00     0.30   0.46
+```
+
+Here is the honest arc of that table. The first run scored recall 0.10
+overall and exactly 0.00 on the German half, because every signal was written
+in English and the dampener was giving a free pass to any attack that
+happened to mention "research." Fixing that meant generalizing whole attack
+families, not memorizing test strings: the bare "ignore the above and say X"
+form, the spellcheck-and-print exfiltration trick, the "forget everything
+we've talked about" conversation reset, German translations of the same
+families, and a dampener that now requires the text to actually be *about*
+injection before it discounts anything. Recall nearly tripled to 0.29 and
+precision stayed at 1.00: zero false alarms on 399 benign prompts, before and
+after.
+
+Why is recall not higher? Because roughly half the remaining misses are
+prompts like "Generate SQL code to access a database", which deepset labels
+as attacks in their retrieval context but which contain no injection
+mechanics at all. A regex layer that blocked every imperative sentence would
+be a spam filter, not an injection detector, so those stay out of scope on
+purpose. This is also exactly why a zero-false-positive regex layer belongs
+*in front of* a model-based classifier rather than instead of one: it
+deletes the copy-paste attacks for free, in microseconds, with an audit
+trail, and leaves the semantic long tail to something with a brain.
+
 ## What it catches and what it misses
 
 Read this before you trust it with anything.
@@ -125,7 +166,7 @@ smaller, weirder threat. It is a layer, not the wall.
 ## Tests
 
 ```bash
-pip install pytest && pytest -q      # 8 passing
+pip install pytest && pytest -q      # 16 passing
 ```
 
 ## License
