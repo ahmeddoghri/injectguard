@@ -48,9 +48,19 @@ SIGNALS: list[Signal] = [
         patterns=[
             r"ignore (all|any|the|your)?\s*(previous|prior|above|earlier)\s+(instructions?|prompts?|rules?|context)",
             r"ignore (your|the|all|any)\s+(guidelines?|guardrails?|rules?|restrictions?|safety)",
+            # the classic bare form: "ignore the above and say X" (no noun at all)
+            r"ig(no|mo)re (the|all|everything)\s*(above|below)?\s*(and|,|:)",
+            r"ignore (all\s+)?(the\s+)?provided (context|articles?|text|information)",
             r"disregard (all|any|the|your)?\s*(previous|prior|above|earlier)",
             r"forget (everything|all|what|the)\s+(you|above|previous|prior)",
+            # conversation reset: "forget everything we've talked about", "you have amnesia"
+            r"forget (everything|all)\s+(we|that|about|i|before|from)\b",
+            r"\b(has|have|with|got)\s+amnesia\b",
             r"do not (follow|obey|listen to)\s+(the|your|any|previous)",
+            # German, same family
+            r"ignorier(e|en sie)?\s+(alle|die|alle vorherigen|vorherigen|obigen)\s*(anweisungen|instruktionen|regeln|eingaben)?",
+            r"vergiss (alles|was|die|deine)",
+            r"vergessen sie (alles|was|die|ihre)",
         ],
     ),
     Signal(
@@ -63,6 +73,14 @@ SIGNALS: list[Signal] = [
             r"pretend (to be|you are|that you)",
             r"act as (if|though|a|an)\b",
             r"new (system )?(prompt|instructions?|rules?):",
+            # conversation reset framed as a fresh assignment
+            r"(now )?(come|comes|start with) (a )?new (task|tasks|assignment)",
+            # German, same family
+            r"(du bist|sie sind) (jetzt|nun|ab sofort)",
+            r"tu so,? als",
+            r"(agiere|handeln sie|agieren sie) als",
+            r"von nun an",
+            r"ich m(ö|o)chte, dass (du|sie) als .{0,40}(agier|fungier|handel)",
         ],
     ),
     Signal(
@@ -83,6 +101,13 @@ SIGNALS: list[Signal] = [
             r"(reveal|show|print|repeat|output|tell me)\s+(your|the)\s+(original\s+|initial\s+|system\s+)*(prompt|instructions?|rules?)",
             r"what (are|were) your (original |initial |system )?(instructions?|rules?)",
             r"repeat the (words|text) above",
+            # the spellcheck-and-print family: any verb aimed at "the above prompt/text"
+            r"(print|repeat|output|spell.?check|proofread|copy)\b.{0,40}\b(above|obige[nr]?)\s*(prompt|text|instructions?|eingabeaufforderung)?",
+            r"(the )?(text|prompt|words) above and (print|repeat|output|return)",
+            r"return your embeddings",
+            # German, same family
+            r"(drucke|drucken sie|zeige|zeigen sie|wiederhole|wiederholen sie)\b.{0,40}(eingabeaufforderung|prompt|anweisungen)",
+            r"pr(ü|u)fen sie .{0,30}rechtschreibung",
         ],
     ),
     Signal(
@@ -119,10 +144,22 @@ SIGNALS: list[Signal] = [
 # we dampen the score. A genuine multi-signal attack still clears the threshold;
 # a single-signal message that is really an article or a research question does
 # not. This is a deliberate precision/recall trade, documented in the README.
+#
+# The generic publication words (article, research, example...) only count when
+# the text is actually about injection as a topic. Without that anchor, any
+# roleplay attack that happens to mention "research" or "discuss" gets a free
+# discount, which is exactly how the first external-benchmark run lost recall.
+_META_TOPIC = re.compile(
+    r"\b(prompt injection|jailbreak(s|ing)?|injection attack|adversarial prompt)\b",
+    re.IGNORECASE,
+)
+_META_GENERIC = re.compile(
+    r"\b(article|blog|post|paper|research(ing|er)?|study|example|discuss(es|ing)?)\b",
+    re.IGNORECASE,
+)
 META_FRAMING = [
     re.compile(p, re.IGNORECASE)
     for p in [
-        r"\b(article|blog|post|paper|research(ing|er)?|study|example|discuss(es|ing)?)\b",
         r"attackers? (say|use|write|craft|send)",
         r"how (to )?(defend|protect|prevent|detect)",
         r"what (is|are) (a |an )?(prompt injection|jailbreak)",
@@ -133,4 +170,8 @@ META_DAMPEN = 0.35
 
 def meta_discussion_score(text: str) -> float:
     """Return the dampening to subtract when text reads as discussion, not attack."""
-    return META_DAMPEN if any(p.search(text) for p in META_FRAMING) else 0.0
+    if any(p.search(text) for p in META_FRAMING):
+        return META_DAMPEN
+    if _META_GENERIC.search(text) and _META_TOPIC.search(text):
+        return META_DAMPEN
+    return 0.0
