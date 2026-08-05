@@ -2,7 +2,6 @@
 
 **Catch prompt injections and jailbreaks before they reach your model, and know exactly why each one was blocked.**
 
-![CI](https://github.com/ahmeddoghri/injectguard/actions/workflows/ci.yml/badge.svg)
 ![tests](https://img.shields.io/badge/tests-25%20passing-brightgreen)
 ![python](https://img.shields.io/badge/python-3.9%2B-blue)
 ![deps](https://img.shields.io/badge/runtime%20deps-none-success)
