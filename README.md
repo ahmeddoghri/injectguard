@@ -2,10 +2,13 @@
 
 **Catch prompt injections and jailbreaks before they reach your model, and know exactly why each one was blocked.**
 
-![tests](https://img.shields.io/badge/tests-25%20passing-brightgreen)
+[![tests](https://github.com/ahmeddoghri/injectguard/actions/workflows/tests.yml/badge.svg)](https://github.com/ahmeddoghri/injectguard/actions/workflows/tests.yml)
 ![python](https://img.shields.io/badge/python-3.9%2B-blue)
 ![deps](https://img.shields.io/badge/runtime%20deps-none-success)
 ![license](https://img.shields.io/badge/license-MIT-black)
+[![case study](https://img.shields.io/badge/case%20study-adoghri.com-e0703e)](https://adoghri.com/project-15.html)
+
+![injectguard](docs/cover.jpg)
 
 > **100% precision and recall on a red-team corpus that is full of benign
 > lookalikes on purpose.** Every block comes with the exact signals that fired.
