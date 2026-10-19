@@ -1,4 +1,4 @@
-# 🛡️ injectguard
+# injectguard
 
 **Catch prompt injections and jailbreaks before they reach your model, and know exactly why each one was blocked.**
 
